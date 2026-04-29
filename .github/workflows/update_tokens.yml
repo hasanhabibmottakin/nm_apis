@@ -1,0 +1,58 @@
+name: Update Tokens Auto
+
+on:
+  schedule:
+    - cron: '0 * * * *' 
+  workflow_dispatch: 
+
+permissions:
+  contents: write
+
+jobs:
+  generate-tokens:
+    runs-on: ubuntu-latest
+
+    env:
+      SCRIPT_ZIP_PASSWORD: ${{ secrets.SCRIPT_ZIP_PASSWORD }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Install required tools
+        run: |
+          sudo apt update
+          sudo apt install -y p7zip-full python3-pip
+          pip install requests beautifulsoup4
+
+      - name: Unzip AES256 protected script
+        run: |
+          mkdir -p tmp_script
+          7z x token_script.zip -p"$SCRIPT_ZIP_PASSWORD" -otmp_script
+
+      - name: Run Python script
+        run: |
+          python3 tmp_script/main.py
+
+      - name: Debug outputs
+        run: |
+          echo "PWD: $(pwd)"
+          ls -la
+          if [ -f "tokens.json" ]; then
+            echo "tokens.json exists, size=$(stat -c%s "tokens.json") bytes"
+          else
+            echo "tokens.json MISSING"
+          fi
+
+      - name: Remove script after execution (Security)
+        run: |
+          rm -rf tmp_script
+
+      - name: Commit and push updated tokens
+        run: |
+          git config user.name "TokenBot"
+          git config user.email "tokenbot@example.com"
+          git add tokens.json
+          git diff --cached --quiet || (git commit -m " Auto update tokens.json" && git push)
