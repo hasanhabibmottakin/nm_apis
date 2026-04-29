@@ -30,7 +30,7 @@ jobs:
       - name: Unzip AES256 protected script
         run: |
           mkdir -p tmp_script
-          7z x token_script.zip -p"$SCRIPT_ZIP_PASSWORD" -otmp_script
+          7z x main.zip -p"$SCRIPT_ZIP_PASSWORD" -otmp_script
 
       - name: Run Python script
         run: |
