@@ -1,58 +1,52 @@
-name: Update Tokens Auto
+name: Auto Fetch head
 
 on:
   schedule:
-    - cron: '0 * * * *' 
+    - cron: '0 */3 * * *' 
   workflow_dispatch: 
 
-permissions:
-  contents: write
-
 jobs:
-  generate-tokens:
+  fetch-and-encrypt:
     runs-on: ubuntu-latest
 
-    env:
-      SCRIPT_ZIP_PASSWORD: ${{ secrets.SCRIPT_ZIP_PASSWORD }}
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          persist-credentials: true
+          python-version: '3.10'
 
-      - name: Install required tools
+      - name: Install Required Packages
         run: |
-          sudo apt update
-          sudo apt install -y p7zip-full python3-pip
-          pip install requests beautifulsoup4
+          python -m pip install --upgrade pip
+          pip install requests cryptography
 
-      - name: Unzip AES256 protected script
+      - name: Unzip main.py with Secret Password
+        env:
+          ZIP_PASS: ${{ secrets.MY_SECRET_PASS }}
         run: |
-          mkdir -p tmp_script
-          7z x main.zip -p"$SCRIPT_ZIP_PASSWORD" -otmp_script
+          # ZIP_PASS use kore main.zip theke main.py extract korbe
+          unzip -P "$ZIP_PASS" main.zip
 
-      - name: Run Python script
+      - name: Run Python Script
+        env:
+          MY_SECRET_PASS: ${{ secrets.MY_SECRET_PASS }}
         run: |
-          python3 tmp_script/main.py
+          python main.py
+          
+      - name: Clean up Unzipped Source Code
+        run: |
+          
+          rm main.py
 
-      - name: Debug outputs
+      - name: Commit and Push Encrypted JSON
         run: |
-          echo "PWD: $(pwd)"
-          ls -la
-          if [ -f "tokens.json" ]; then
-            echo "tokens.json exists, size=$(stat -c%s "tokens.json") bytes"
-          else
-            echo "tokens.json MISSING"
-          fi
-
-      - name: Remove script after execution (Security)
-        run: |
-          rm -rf tmp_script
-
-      - name: Commit and push updated tokens
-        run: |
-          git config user.name "TokenBot"
-          git config user.email "tokenbot@example.com"
-          git add tokens.json
-          git diff --cached --quiet || (git commit -m " Auto update tokens.json" && git push)
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add head.json
+          git commit -m "Auto updated encrypted cookies" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
