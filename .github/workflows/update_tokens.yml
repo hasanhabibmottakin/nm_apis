@@ -1,9 +1,9 @@
-name: Auto Fetch head
+name: Auto Fetch Cookies
 
 on:
   schedule:
-    - cron: '0 */3 * * *' 
-  workflow_dispatch: 
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
 
 jobs:
   fetch-and-encrypt:
@@ -27,8 +27,7 @@ jobs:
         env:
           ZIP_PASS: ${{ secrets.MY_SECRET_PASS }}
         run: |
-          # ZIP_PASS use kore main.zip theke main.py extract korbe
-          unzip -P "$ZIP_PASS" main.zip
+          7z x -p"$ZIP_PASS" main.zip -y
 
       - name: Run Python Script
         env:
@@ -38,7 +37,6 @@ jobs:
           
       - name: Clean up Unzipped Source Code
         run: |
-          
           rm main.py
 
       - name: Commit and Push Encrypted JSON
