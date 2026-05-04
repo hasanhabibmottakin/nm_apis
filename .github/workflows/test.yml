@@ -1,0 +1,65 @@
+name: Auto Fetch Tokens
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch-and-save:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Fetch Tokens and Generate JSON
+        run: |
+          OUTPUT_FILE="tokens.json"
+          echo "{" > $OUTPUT_FILE
+
+          for i in {1..30}; do
+            RESPONSE=$(curl -s "https://netflix.mytb.fun/get_token")
+            
+            STATUS=$(echo "$RESPONSE" | jq -r '.status')
+            
+            if [ "$STATUS" == "success" ]; then
+              ADDHASH=$(echo "$RESPONSE" | jq -r '.data.addhash')
+              T_HASH_T=$(echo "$RESPONSE" | jq -r '.data.t_hash_t')
+              
+              DECODED_T_HASH_T=$(echo "$T_HASH_T" | sed 's/%3A/:/g')
+              TIMESTAMP=$(echo "$DECODED_T_HASH_T" | awk -F'::' '{print $3}')
+              
+              if [ -z "$TIMESTAMP" ]; then
+                TIMESTAMP=$(date +%s)
+              fi
+
+              if [ $i -lt 30 ]; then
+                echo "    \"$i\": {" >> $OUTPUT_FILE
+                echo "        \"addhash\": \"$ADDHASH\"," >> $OUTPUT_FILE
+                echo "        \"t_hash_t\": \"$T_HASH_T\"," >> $OUTPUT_FILE
+                echo "        \"timestamp\": $TIMESTAMP" >> $OUTPUT_FILE
+                echo "    }," >> $OUTPUT_FILE
+              else
+                echo "    \"$i\": {" >> $OUTPUT_FILE
+                echo "        \"addhash\": \"$ADDHASH\"," >> $OUTPUT_FILE
+                echo "        \"t_hash_t\": \"$T_HASH_T\"," >> $OUTPUT_FILE
+                echo "        \"timestamp\": $TIMESTAMP" >> $OUTPUT_FILE
+                echo "    }" >> $OUTPUT_FILE
+              fi
+            fi
+            
+            if [ $i -lt 30 ]; then
+              sleep 60
+            fi
+          done
+
+          echo "}" >> $OUTPUT_FILE
+          
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add tokens.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update tokens.json"
+          git push
