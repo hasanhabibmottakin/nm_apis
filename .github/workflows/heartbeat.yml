@@ -1,0 +1,13 @@
+name: Heartbeat Cron Job
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  hit-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Heartbeat URL
+        run: curl -sL "https://netflix.linkchur.top/api.php?route=heartbeat"
